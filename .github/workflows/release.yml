@@ -9,30 +9,32 @@ permissions:
   contents: write
 
 jobs:
-  build-and-release:
+  build:
     runs-on: ubuntu-latest
-
     strategy:
       matrix:
         goos: [linux, darwin]
         goarch: [amd64, arm64]
+    outputs:
+      assets: ${{ steps.set-assets.outputs.assets }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Build
+        run: |
+          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o jsontype ./cmd/jsontype
+      - name: Save asset path
+        id: set-assets
+        run: echo "assets=jsontype-${{ matrix.goos }}-${{ matrix.goarch }}" >> $GITHUB_OUTPUT
 
+  release:
+    needs: build
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-
-      - name: Build
-        run: |
-          CGO_ENABLED=0 \
-          GOOS=${{ matrix.goos }} \
-          GOARCH=${{ matrix.goarch }} \
-          go build -o jsontype ./cmd/jsontype
-
       - name: Create Release
         id: release
         uses: actions/create-release@v1
@@ -43,13 +45,12 @@ jobs:
           release_name: ${{ github.ref_name }}
           draft: false
           prerelease: false
-
-      - name: Upload binary
+      - name: Upload Binaries
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.release.outputs.upload_url }}
-          asset_path: ./jsontype
-          asset_name: jsontype-${{ matrix.goos }}-${{ matrix.goarch }}
+          asset_path: ./jsontype-linux-amd64   # upload all your built binaries here
+          asset_name: jsontype-linux-amd64
           asset_content_type: application/octet-stream
