@@ -281,6 +281,7 @@ func TestArrayOfArraysOfObjects(t *testing.T) {
 
 // TestPlanShape_ObjectsNeverCollapse verifies the core law
 func TestPlanShape_ObjectsNeverCollapse(t *testing.T) {
+	logger := slog.New(slog.DiscardHandler)
 	// Test: object nested under non-mixed array
 	field := &jsontype.FieldInfo{
 		Path: []string{"arr"},
@@ -305,7 +306,7 @@ func TestPlanShape_ObjectsNeverCollapse(t *testing.T) {
 		},
 	}
 
-	plan := jsontype.PlanShape(field)
+	plan := jsontype.PlanShape(field, logger)
 
 	t.Log("Plan:")
 	t.Log(jsontype.PlanToString(plan, "", true))

@@ -2,6 +2,7 @@ package jsontype
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 )
 
@@ -231,8 +232,8 @@ func MergerToString(m *Merger, indent string, isLast bool) string {
 }
 
 // SnapshotPlan creates a golden test snapshot of a plan
-func SnapshotPlan(name string, field *FieldInfo) string {
-	plan := PlanShape(field)
+func SnapshotPlan(name string, field *FieldInfo, logger *slog.Logger) string {
+	plan := PlanShape(field, logger)
 	return fmt.Sprintf("=== Plan Snapshot: %s ===\n%s", name, PlanToString(plan, "", true))
 }
 

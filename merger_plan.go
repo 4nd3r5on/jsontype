@@ -1,6 +1,9 @@
 package jsontype
 
-import "maps"
+import (
+	"log/slog"
+	"maps"
+)
 
 // Layer 1: Shape Planner
 // Pure, side-effect-free planning phase
@@ -33,28 +36,50 @@ type MergePlan struct {
 	Fields map[string]*MergePlan
 }
 
-// PlanShape determines the merge strategy for a FieldInfo tree
+// PlanShape is a log wrapper for planShape
+func PlanShape(field *FieldInfo, logger *slog.Logger) *MergePlan {
+	plan := planShape(field, logger)
+	logger.Debug("created plan for field",
+		"path", PathToString(field.Path),
+		"planKind", plan.Kind,
+		"hasFields", len(plan.Fields),
+		"hasElem", plan.Elem != nil)
+	return plan
+}
+
+// planShape determines the merge strategy for a FieldInfo tree
 // This is pure logic with no side effects
-func PlanShape(field *FieldInfo) *MergePlan {
+func planShape(field *FieldInfo, logger *slog.Logger) *MergePlan {
 	switch field.Type {
 
 	case TypeArray, TypeObjInt:
-		elemPlans := make([]*MergePlan, 0, len(field.Children))
-		for _, ch := range field.Children {
-			elemPlans = append(elemPlans, PlanShape(ch))
-		}
-
-		// Decide array strategy
 		strategy := ArrayCollapse
 		if IsMixedContainer(field) {
 			strategy = ArrayKeepIndices
 		}
 
-		// Arrays always have exactly ONE element plan
-		return &MergePlan{
-			Kind:          PlanArray,
-			ArrayStrategy: strategy,
-			Elem:          unifyPlans(elemPlans),
+		if strategy == ArrayKeepIndices {
+			fields := map[string]*MergePlan{}
+			for _, ch := range field.Children {
+				key := lastPathSegment(ch.Path)
+				childPlan := PlanShape(ch, logger)
+				fields[key] = childPlan
+			}
+			return &MergePlan{
+				Kind:          PlanArray,
+				ArrayStrategy: ArrayKeepIndices,
+				Fields:        fields,
+			}
+		} else {
+			elemPlans := make([]*MergePlan, 0, len(field.Children))
+			for _, ch := range field.Children {
+				elemPlans = append(elemPlans, PlanShape(ch, logger))
+			}
+			return &MergePlan{
+				Kind:          PlanArray,
+				ArrayStrategy: ArrayCollapse,
+				Elem:          unifyPlans(elemPlans),
+			}
 		}
 
 	case TypeObj:
@@ -65,8 +90,9 @@ func PlanShape(field *FieldInfo) *MergePlan {
 		fields := map[string]*MergePlan{}
 		for _, ch := range field.Children {
 			key := lastPathSegment(ch.Path)
-			fields[key] = mergeObjectFieldPlans(fields[key], PlanShape(ch))
+			fields[key] = mergeObjectFieldPlans(fields[key], PlanShape(ch, logger))
 		}
+
 		return &MergePlan{
 			Kind:   PlanObject,
 			Fields: fields,
@@ -82,12 +108,8 @@ func unifyPlans(plans []*MergePlan) *MergePlan {
 	if len(plans) == 0 {
 		return &MergePlan{Kind: PlanPrimitive}
 	}
-
-	// Start with the first plan
 	result := plans[0]
-
-	// Merge with subsequent plans
-	for i := 1; i < len(plans); i++ {
+	for i := range len(plans) {
 		result = mergeTwoPlans(result, plans[i])
 	}
 

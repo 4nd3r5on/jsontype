@@ -66,14 +66,12 @@ func executeMergeWithPath(
 
 	case PlanArray:
 		m := NewMerger(currentPath)
-
 		// Determine array type from fields
 		arrayType := TypeArray
 		if len(fields) > 0 && fields[0].Type == TypeObjInt {
 			arrayType = TypeObjInt
 		}
 		m.AddTypes(label, arrayType)
-
 		logger.Debug("executing array merge",
 			"path", PathToString(currentPath),
 			"strategy", plan.ArrayStrategy,
@@ -82,7 +80,6 @@ func executeMergeWithPath(
 
 		// Group array elements according to strategy
 		buckets := groupArrayElements(fields, plan.ArrayStrategy, logger)
-
 		logger.Debug("grouped array elements",
 			"path", PathToString(currentPath),
 			"numBuckets", len(buckets),
@@ -90,15 +87,27 @@ func executeMergeWithPath(
 
 		// Merge each bucket
 		for key, elems := range buckets {
-			// Build the child path: current path + key
 			childPath := append(append([]string{}, currentPath...), key)
-
 			logger.Debug("merging array bucket",
 				"bucketKey", key,
 				"childPath", PathToString(childPath),
 				"numElems", len(elems))
 
-			child := executeMergeWithPath(plan.Elem, label, elems, childPath, logger)
+			// Get the appropriate plan for this bucket
+			var childPlan *MergePlan
+			if plan.ArrayStrategy == ArrayKeepIndices && plan.Fields != nil {
+				// Use the specific plan for this index
+				childPlan = plan.Fields[key]
+				if childPlan == nil {
+					// Fallback to primitive if no plan exists
+					childPlan = &MergePlan{Kind: PlanPrimitive}
+				}
+			} else {
+				// Use the unified element plan
+				childPlan = plan.Elem
+			}
+
+			child := executeMergeWithPath(childPlan, label, elems, childPath, logger)
 			m.AddChild(key, label, child)
 		}
 		return m
@@ -188,7 +197,7 @@ func MergeFieldInfo(m *Merger, label string, field *FieldInfo, logger *slog.Logg
 		"type", field.Type)
 
 	// Step 1: Create the plan
-	plan := PlanShape(field)
+	plan := PlanShape(field, logger)
 
 	logger.Debug("created merge plan",
 		"path", PathToString(field.Path),
