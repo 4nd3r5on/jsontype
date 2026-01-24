@@ -13,21 +13,97 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        goos: [linux, darwin]
+        goos: [linux, darwin, windows]
         goarch: [amd64, arm64]
-    outputs:
-      assets: ${{ steps.set-assets.outputs.assets }}
+        exclude:
+          # Exclude arm64 on windows if not needed
+          - goos: windows
+            goarch: arm64
+      fail-fast: false
+    
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Needed for git describe
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - name: Build
+          check-latest: true
+      
+      - name: Get project dependencies
+        run: go mod download
+      
+      - name: Set build variables
+        id: vars
         run: |
-          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o jsontype ./cmd/jsontype
-      - name: Save asset path
-        id: set-assets
-        run: echo "assets=jsontype-${{ matrix.goos }}-${{ matrix.goarch }}" >> $GITHUB_OUTPUT
+          COMMIT=$(git describe --always --dirty)
+          VERSION=${GITHUB_REF_NAME#v}
+          echo "commit=$COMMIT" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+          # Set binary name based on OS
+          if [[ "${{ matrix.goos }}" == "windows" ]]; then
+            echo "binary_name=jsontype.exe" >> $GITHUB_OUTPUT
+          else
+            echo "binary_name=jsontype" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Build
+        env:
+          CGO_ENABLED: 0
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          mkdir -p build_assets
+          
+          go build \
+            -o build_assets/${{ steps.vars.outputs.binary_name }} \
+            -trimpath \
+            -buildvcs=false \
+            -ldflags="-X main.version=${{ steps.vars.outputs.version }} -X main.commit=${{ steps.vars.outputs.commit }} -s -w -buildid=" \
+            -v \
+            ./cmd/jsontype
+      
+      - name: Copy additional files
+        run: |
+          cp README.md build_assets/ 2>/dev/null || echo "README.md not found, skipping"
+          cp LICENSE build_assets/ 2>/dev/null || echo "LICENSE not found, skipping"
+      
+      - name: Create archive
+        shell: bash
+        run: |
+          cd build_assets
+          
+          # Set consistent timestamps for reproducible builds
+          touch -mt $(date +%Y01010000) *
+          
+          ARCHIVE_NAME="jsontype-${{ matrix.goos }}-${{ matrix.goarch }}"
+          
+          if [[ "${{ matrix.goos }}" == "windows" ]]; then
+            zip -9vr ../${ARCHIVE_NAME}.zip .
+            ARCHIVE_FILE="../${ARCHIVE_NAME}.zip"
+          else
+            tar czf ../${ARCHIVE_NAME}.tar.gz .
+            ARCHIVE_FILE="../${ARCHIVE_NAME}.tar.gz"
+          fi
+          
+          cd ..
+          
+          # Generate checksums
+          DGST=${ARCHIVE_FILE}.dgst
+          for METHOD in md5 sha1 sha256 sha512; do
+            openssl dgst -$METHOD $ARCHIVE_FILE | sed 's/([^)]*)//g' >> $DGST
+          done
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jsontype-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            jsontype-${{ matrix.goos }}-${{ matrix.goarch }}.*
 
   release:
     needs: build
@@ -35,22 +111,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Create Release
-        id: release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
         with:
-          tag_name: ${{ github.ref_name }}
-          release_name: ${{ github.ref_name }}
+          path: ./artifacts
+          merge-multiple: true
+      
+      - name: Create release and upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./artifacts/*
           draft: false
           prerelease: false
-      - name: Upload Binaries
-        uses: actions/upload-release-asset@v1
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.release.outputs.upload_url }}
-          asset_path: ./jsontype-linux-amd64   # upload all your built binaries here
-          asset_name: jsontype-linux-amd64
-          asset_content_type: application/octet-stream
