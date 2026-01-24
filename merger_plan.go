@@ -70,16 +70,15 @@ func planShape(field *FieldInfo, logger *slog.Logger) *MergePlan {
 				ArrayStrategy: ArrayKeepIndices,
 				Fields:        fields,
 			}
-		} else {
-			elemPlans := make([]*MergePlan, 0, len(field.Children))
-			for _, ch := range field.Children {
-				elemPlans = append(elemPlans, PlanShape(ch, logger))
-			}
-			return &MergePlan{
-				Kind:          PlanArray,
-				ArrayStrategy: ArrayCollapse,
-				Elem:          unifyPlans(elemPlans),
-			}
+		}
+		elemPlans := make([]*MergePlan, 0, len(field.Children))
+		for _, ch := range field.Children {
+			elemPlans = append(elemPlans, PlanShape(ch, logger))
+		}
+		return &MergePlan{
+			Kind:          PlanArray,
+			ArrayStrategy: ArrayCollapse,
+			Elem:          unifyPlans(elemPlans),
 		}
 
 	case TypeObj:
