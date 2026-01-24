@@ -19,13 +19,18 @@ The binary will be installed as `jsontype` in your `$GOBIN`.
 ## Basic Usage
 
 ```sh
+# Those three lines do the same
+jsontype -file="./parseme.json"
 jsontype -file ./parseme.json
 ```
 
 Multiple files can be provided and will be merged into a single inferred structure:
 
 ```sh
-jsontype -file "./parseme1.json" -file "./parseme2.json" -file "./parseme3.json"
+# Those three lines do the same
+go run ./cmd/jsontype -file="parse\ me.json parseme1.json parseme2.json"
+go run ./cmd/jsontype -file="'parse me.json' parseme1.json parseme2.json"
+go run ./cmd/jsontype -file="parse\ me.json,parseme1.json,parseme2.json"
 ```
 
 Enable verbose diagnostics:
