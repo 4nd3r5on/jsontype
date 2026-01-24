@@ -68,24 +68,28 @@ jobs:
       - name: Create archive
         shell: bash
         run: |
+          ARCHIVE_NAME="jsontype-${{ matrix.goos }}-${{ matrix.goarch }}"
+          
           cd build_assets
           
           # Set consistent timestamps for reproducible builds
           touch -mt $(date +%Y01010000) *
           
-          ARCHIVE_NAME="jsontype-${{ matrix.goos }}-${{ matrix.goarch }}"
-          
           if [[ "${{ matrix.goos }}" == "windows" ]]; then
             zip -9vr ../${ARCHIVE_NAME}.zip .
-            ARCHIVE_FILE="../${ARCHIVE_NAME}.zip"
           else
             tar czf ../${ARCHIVE_NAME}.tar.gz .
-            ARCHIVE_FILE="../${ARCHIVE_NAME}.tar.gz"
           fi
           
           cd ..
           
           # Generate checksums
+          if [[ "${{ matrix.goos }}" == "windows" ]]; then
+            ARCHIVE_FILE="${ARCHIVE_NAME}.zip"
+          else
+            ARCHIVE_FILE="${ARCHIVE_NAME}.tar.gz"
+          fi
+          
           DGST=${ARCHIVE_FILE}.dgst
           for METHOD in md5 sha1 sha256 sha512; do
             openssl dgst -$METHOD $ARCHIVE_FILE | sed 's/([^)]*)//g' >> $DGST
