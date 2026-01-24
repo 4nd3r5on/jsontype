@@ -6,12 +6,33 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	"runtime"
 	"strings"
+	"unicode"
 
 	sp "github.com/4nd3r5on/go-strings-parser"
 
 	"github.com/4nd3r5on/jsontype"
 )
+
+func ObjectPathCharset() []rune {
+	charset := make([]rune, 0)
+
+	for r := rune(0); r <= unicode.MaxRune; r++ {
+		if unicode.IsLetter(r) {
+			charset = append(charset, r)
+		}
+	}
+
+	for r := '0'; r <= '9'; r++ {
+		charset = append(charset, r)
+	}
+
+	special := []rune{'_', '.', '-', '$'}
+	charset = append(charset, special...)
+
+	return charset
+}
 
 // parsePathList parses a comma-separated list of JSON paths
 func parsePathList(s string) ([][]string, error) {
@@ -24,6 +45,7 @@ func parsePathList(s string) ([][]string, error) {
 				return strings.TrimSpace(element), false, nil
 			},
 		),
+		sp.WithCharset(sp.NewCharset(ObjectPathCharset(), true)),
 	)
 	if err != nil {
 		return nil, err
@@ -69,13 +91,21 @@ func main() {
 	stat, _ := os.Stdin.Stat()
 	hasStdin := stat.Mode()&os.ModeCharDevice == 0
 
-	files, err := sp.Parse(filesStr,
+	filesPathOptsArray := []sp.Option{
 		sp.WithProcessFunc(
 			func(element string) (processed string, skip bool, err error) {
 				return strings.TrimSpace(element), false, nil
 			},
 		),
-	)
+	}
+	if runtime.GOOS == "windows" {
+		filesPathOptsArray = append(
+			filesPathOptsArray,
+			sp.WithWindowsPath(),
+		)
+	}
+
+	files, err := sp.Parse(filesStr, filesPathOptsArray...)
 	if err != nil {
 		log.Fatalf("failed to parse files argument: %v", err)
 	}
