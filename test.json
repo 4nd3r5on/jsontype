@@ -1,0 +1,46 @@
+{
+  "null_val": null,
+  "bool_true": true,
+  "bool_false": false,
+  "int32_val": 123456,
+  "int64_val": 9223372036854775807,
+  "float64_val": 3.141592653589793,
+  "plain_string": "just a string",
+  "strings": {
+    "uuid": "f3a9c2e7-6b4d-4f81-9a6c-2d8e5b71c0fa",
+    "email": "admin@email.com",
+    "phone": "+380661153394",
+    "windows_path": "C:/Users/test/file.txt",
+    "link_https": "https://google.com/search",
+    "link_noscheme": "google.com/search",
+    "domain": "google.com",
+    "hex": "a9f3c2e7b4d81f6a",
+    "base64": "Qm9yZGVybGluZUVudHJvcHk=",
+    "base64url": "Xk3rA9mZP2Q7Lw8N0B6f_Q",
+    "ipv4": "127.0.0.1",
+    "ipv4_mask": "127.0.0.1/32",
+    "ipv4_port": "127.0.0.1:443",
+    "ipv6": "2a03:2880:21ff:001f:face:b00c:dead:beef",
+    "ipv6_port": "[2a03:2880:21ff:1f:face:b00c:dead:beef]:43792",
+    "mac": "9e:3b:74:a1:5f:c2"
+  },
+  "array_mixed": [
+    1,
+    2.5,
+    "127.0.0.1",
+    {
+      "nested_array": [
+        "Qm9yZGVybGluZUVudHJvcHk=",
+        "google.com",
+        null
+      ]
+    }
+  ],
+  "object_int_keys": {
+    "0": "first",
+    "1": "second",
+    "2": {
+      "deep": "f3a9c2e7-6b4d-4f81-9a6c-2d8e5b71c0fa"
+    }
+  }
+}

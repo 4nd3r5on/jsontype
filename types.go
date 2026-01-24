@@ -16,6 +16,33 @@ const (
 	TypeArray  DetectedType = "array"
 )
 
+// Extended string detection/analysis
+// Detection code is at ./detect_str_type.go
+const (
+	// Common
+	TypeUUID            DetectedType = "string-uuid"             // f3a9c2e7-6b4d-4f81-9a6c-2d8e5b71c0fa
+	TypeFilepathWindows DetectedType = "string-filepath-windows" // C:/user/file
+	TypeEmail           DetectedType = "string-email"            // admin@email.com
+	TypePhone           DetectedType = "string-phone"            // +380661153394
+
+	// Web
+	TypeLink   DetectedType = "string-link"   // https://google.com or google.com/search
+	TypeDomain DetectedType = "string-domain" // google.com
+
+	// Encoding
+	TypeHEX       DetectedType = "string-hex"        // "a9f3c2e7b4d81f6a"
+	TypeBase64    DetectedType = "string-base64"     // "Qm9yZGVybGluZUVudHJvcHk="
+	TypeBase64URL DetectedType = "string-base64-url" // "Xk3rA9mZP2Q7Lw8N0B6f_Q"
+
+	// Networking
+	TypeIPv4         DetectedType = "string-ipv4"           // 127.0.0.1
+	TypeIPv4WithMask DetectedType = "string-ipv4-with-mask" // 127.0.0.1/32
+	TypeIPv6         DetectedType = "string-ipv6"           // 2a03:2880:21ff:001f:face:b00c:dead:beef
+	TypeIPv4PortPair DetectedType = "string-ipv4-port-pair" // 127.0.0.1:443
+	TypeIPv6PortPair DetectedType = "string-ipv6-port-pair" // [2a03:2880:21ff:1f:face:b00c:dead:beef]:43792
+	TypeMAC          DetectedType = "string-mac"            // 9e:3b:74:a1:5f:c2
+)
+
 // FieldInfo represents a single field/path in the JSON structure
 // It serves only for a run through a single file (since)
 type FieldInfo struct {

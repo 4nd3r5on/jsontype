@@ -7,15 +7,17 @@ import (
 )
 
 type parser struct {
-	Root      *FieldInfo
-	seenPaths map[string]*FieldInfo
-	logger    *slog.Logger
+	Root             *FieldInfo
+	seenPaths        map[string]*FieldInfo
+	noStringAnalysis bool
+	logger           *slog.Logger
 }
 
 func ParseStream(
 	s Stream,
 	parseObjects, ignoreObjects [][]string,
 	maxDepth int,
+	noStringAnalysis bool,
 	logger *slog.Logger,
 ) (root *FieldInfo, err error) {
 	if logger == nil {
@@ -23,8 +25,9 @@ func ParseStream(
 	}
 
 	p := parser{
-		seenPaths: make(map[string]*FieldInfo),
-		logger:    logger,
+		seenPaths:        make(map[string]*FieldInfo),
+		noStringAnalysis: noStringAnalysis,
+		logger:           logger,
 	}
 
 	p.logger.Info("starting JSON stream parsing",
@@ -115,8 +118,14 @@ func (p *parser) parseToken(
 		p.logger.Debug("detected number (json.Number)", "path", pathStr, "type", detectedType, "value", t)
 		p.recordType(parent, currentPath, detectedType)
 	case string:
+		var detectedType DetectedType
+		if p.noStringAnalysis {
+			detectedType = TypeString
+		} else {
+			detectedType = DetectStrType(t)
+		}
 		p.logger.Debug("detected string", "path", pathStr, "length", len(t))
-		p.recordType(parent, currentPath, TypeString)
+		p.recordType(parent, currentPath, detectedType)
 	}
 	return nil
 }

@@ -45,11 +45,13 @@ func main() {
 	var logLevel string
 	var parseObjectsStr string
 	var ignoreObjectsStr string
+	var noStringAnalysis bool
 	var maxDepth int
 
 	flag.StringVar(&filesStr, "file", "", "space-separated JSON files to parse (eg './parseme1.json ./parseme2.json')")
 	flag.StringVar(&outPath, "out", "", "output file (default stdout)")
 	flag.StringVar(&logLevel, "log-level", "info", "debug|info|warn|error")
+	flag.BoolVar(&noStringAnalysis, "no-string-analysis", false, "will try to additionally detect types like string-uuid, string-email, etc within strings")
 	flag.StringVar(&parseObjectsStr, "parse-objects", "", "space-separated JSON paths to parse (e.g., 'users data.items')")
 	flag.StringVar(&ignoreObjectsStr, "ignore-objects", "", "space-separated JSON paths to ignore (e.g., 'metadata debug.info')")
 	flag.IntVar(&maxDepth, "max-depth", 0, "maximum depth to parse (0 = unlimited)")
@@ -111,7 +113,7 @@ func main() {
 	process := func(r io.ReadCloser, label string) {
 		defer r.Close()
 		stream := jsontype.NewJSONStream(r)
-		root, err := jsontype.ParseStream(stream, parseObjects, ignoreObjects, maxDepth, logger)
+		root, err := jsontype.ParseStream(stream, parseObjects, ignoreObjects, maxDepth, noStringAnalysis, logger)
 		if err != nil {
 			log.Fatalf("parse %s: %v", label, err)
 		}
