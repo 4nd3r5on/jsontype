@@ -346,4 +346,3 @@ func detectWindowsPath(s string) (DetectedType, bool) {
 	}
 	return "", false
 }
-

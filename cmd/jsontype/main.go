@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	sp "github.com/4nd3r5on/go-strings-parser"
+
 	"github.com/4nd3r5on/jsontype"
 )
 
@@ -96,11 +97,11 @@ func main() {
 	// Parse the path lists from command-line parameters
 	parseObjects, err := parsePathList(parseObjectsStr)
 	if err != nil {
-		log.Panicf("Failed to parse parse objects list: %v", err)
+		log.Panicf("Failed to parse objects list: %v", err)
 	}
 	ignoreObjects, err := parsePathList(ignoreObjectsStr)
 	if err != nil {
-		log.Panicf("Failed to parse parse ignore list: %v", err)
+		log.Panicf("Failed to parse ignore list: %v", err)
 	}
 
 	slog.Debug("configuration",
