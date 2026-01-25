@@ -8,19 +8,56 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"unicode/utf8"
 )
 
 var (
-	// Precompiled regexes (anchored, minimal)
-	reUUID        = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
-	rePhone       = regexp.MustCompile(`^\+[1-9]\d{7,14}$`) // Stricter: require + and min 8 digits
-	reMAC         = regexp.MustCompile(`^([0-9a-f]{2}:){5}[0-9a-f]{2}$`)
-	reWinPath     = regexp.MustCompile(`^[a-zA-Z]:[/\\]`)
-	reDomain      = regexp.MustCompile(`^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$`)
-	reHexStrict   = regexp.MustCompile(`^[0-9a-f]+$`)
-	reBase64Alpha = regexp.MustCompile(`^[A-Za-z0-9+/]+=*$`)
-	reBase64URL   = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
+	reUUID      = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+	rePhone     = regexp.MustCompile(`^\+[1-9]\d{7,14}$`)
+	reMAC       = regexp.MustCompile(`^([0-9a-f]{2}:){5}[0-9a-f]{2}$`)
+	reWinPath   = regexp.MustCompile(`^[a-zA-Z]:[/\\]`)
+	reDomain    = regexp.MustCompile(`^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$`)
+	reHexStrict = regexp.MustCompile(`^[0-9a-f]+$`)
+
+	reBase64Std    = regexp.MustCompile(`^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$`)
+	reBase64RawStd = regexp.MustCompile(`^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2,3})?$`)
+	reBase64URL    = regexp.MustCompile(`^(?:[A-Za-z0-9_-]{4})*(?:[A-Za-z0-9_-]{2}==|[A-Za-z0-9_-]{3}=)?$`)
+	reBase64RawURL = regexp.MustCompile(`^(?:[A-Za-z0-9_-]{4})*(?:[A-Za-z0-9_-]{2,3})?$`)
 )
+
+type Base64Encoding interface {
+	DecodeString(s string) ([]byte, error)
+	EncodeToString(src []byte) string
+}
+
+type Base64Variant struct {
+	Type     DetectedType
+	Regexp   *regexp.Regexp
+	Encoding Base64Encoding
+}
+
+var Base64Variants = []Base64Variant{
+	{
+		Type:     TypeBase64Std,
+		Regexp:   reBase64Std,
+		Encoding: base64.StdEncoding,
+	},
+	{
+		Type:     TypeBase64URL,
+		Regexp:   reBase64URL,
+		Encoding: base64.URLEncoding,
+	},
+	{
+		Type:     TypeBase64RawStd,
+		Regexp:   reBase64RawStd,
+		Encoding: base64.RawStdEncoding,
+	},
+	{
+		Type:     TypeBase64RawURL,
+		Regexp:   reBase64RawURL,
+		Encoding: base64.RawURLEncoding,
+	},
+}
 
 type detector func(string) (DetectedType, bool)
 
@@ -44,9 +81,8 @@ var detectors = []detector{
 	detectDomain,
 
 	// 4. Encodings (must come after UUID and networking)
-	detectHex,
-	detectBase64URL,
-	detectBase64,
+	DetectHex,
+	DetectBase64,
 
 	// 5. Paths
 	detectWindowsPath,
@@ -242,7 +278,7 @@ func detectDomain(s string) (DetectedType, bool) {
 
 // ============= Encoding Detectors =============
 
-func detectHex(s string) (DetectedType, bool) {
+func DetectHex(s string) (DetectedType, bool) {
 	// Must be even length and at least 8 chars to avoid false positives
 	if len(s) < 8 || len(s)%2 != 0 {
 		return "", false
@@ -259,80 +295,24 @@ func detectHex(s string) (DetectedType, bool) {
 	return TypeHEX, err == nil
 }
 
-func detectBase64URL(s string) (DetectedType, bool) {
+func DetectBase64(s string) (DetectedType, bool) {
 	// Minimum 8 chars to reduce false positives
 	if len(s) < 8 {
 		return "", false
 	}
-
-	// Base64URL doesn't use padding and uses - and _
-	if strings.Contains(s, "+") || strings.Contains(s, "/") || strings.Contains(s, "=") {
-		return "", false
-	}
-
-	// Additional check: must contain at least some base64url-specific chars or uppercase
-	// to avoid matching simple lowercase strings like "london" or "engineering"
-	hasSpecialOrUpper := false
-	hasDigit := false
-
-	for _, r := range s {
-		if r == '-' || r == '_' {
-			hasSpecialOrUpper = true
-		} else if r >= 'A' && r <= 'Z' {
-			hasSpecialOrUpper = true
-		} else if r >= '0' && r <= '9' {
-			hasDigit = true
+	for _, variant := range Base64Variants {
+		if !variant.Regexp.MatchString(s) {
+			continue
+		}
+		decoded, err := variant.Encoding.DecodeString(s)
+		if err != nil {
+			continue
+		}
+		if utf8.Valid(decoded) {
+			return variant.Type, true
 		}
 	}
-
-	// Require mixed case or special chars or digits
-	// Reject pure lowercase alphabetic strings
-	if !hasSpecialOrUpper && !hasDigit {
-		return "", false
-	}
-
-	if !reBase64URL.MatchString(s) {
-		return "", false
-	}
-
-	// Attempt decode
-	_, err := base64.RawURLEncoding.DecodeString(s)
-	return TypeBase64URL, err == nil
-}
-
-func detectBase64(s string) (DetectedType, bool) {
-	// Minimum 8 chars to reduce false positives
-	if len(s) < 8 {
-		return "", false
-	}
-
-	// Standard base64 alphabet check
-	if !reBase64Alpha.MatchString(s) {
-		return "", false
-	}
-
-	// Must contain at least one uppercase or special char to avoid false positives
-	hasUpperOrSpecial := false
-	for _, r := range s {
-		if (r >= 'A' && r <= 'Z') || r == '+' || r == '/' || r == '=' {
-			hasUpperOrSpecial = true
-			break
-		}
-	}
-
-	if !hasUpperOrSpecial {
-		return "", false
-	}
-
-	// Check padding rules
-	padCount := strings.Count(s, "=")
-	if padCount > 2 || (padCount > 0 && !strings.HasSuffix(s, strings.Repeat("=", padCount))) {
-		return "", false
-	}
-
-	// Attempt decode
-	_, err := base64.StdEncoding.DecodeString(s)
-	return TypeBase64, err == nil
+	return "", false
 }
 
 // ============= Path Detectors =============
