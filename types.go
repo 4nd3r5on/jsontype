@@ -30,11 +30,11 @@ const (
 	TypeDomain DetectedType = "string-domain" // google.com
 
 	// Encoding
-	TypeHEX          DetectedType = "string-hex" // "a9f3c2e7b4d81f6a"
-	TypeBase64Std    DetectedType = "string-b64-std"
-	TypeBase64URL    DetectedType = "string-b64-url"
-	TypeBase64RawStd DetectedType = "string-b64-raw-std"
-	TypeBase64RawURL DetectedType = "string-b64-raw-url"
+	TypeHEX          DetectedType = "string-hex"         // "a9f3c2e7b4d81f6a"
+	TypeBase64Std    DetectedType = "string-b64-std"     // wqFIb2xhL+S4lueVjCtHbyE=
+	TypeBase64URL    DetectedType = "string-b64-url"     // wqFIb2xhL-S4lueVjCtHbyE=
+	TypeBase64RawStd DetectedType = "string-b64-raw-std" // wqFIb2xhL+S4lueVjCtHbyE
+	TypeBase64RawURL DetectedType = "string-b64-raw-url" // wqFIb2xhL-S4lueVjCtHbyE
 
 	// Networking
 	TypeIPv4         DetectedType = "string-ipv4"           // 127.0.0.1

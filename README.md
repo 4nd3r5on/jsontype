@@ -143,11 +143,17 @@ String type detection is heuristic-based and may not be 100% accurate for all ed
 - `string-hex` - Hexadecimal strings  
   Example: `a9f3c2e7b4d81f6a`
   
-- `string-base64` - Base64 encoded data  
-  Example: `Qm9yZGVybGluZUVudHJvcHk=`
-  
-- `string-base64-url` - URL-safe Base64  
-  Example: `Xk3rA9mZP2Q7Lw8N0B6f_Q`
+- `string-b64-std` - Base64 standard encoded data  
+  Example: `wqFIb2xhL+S4lueVjCtHbyE=`
+
+- `string-b64-url` - Base64 URL encoded data  
+  Example: `wqFIb2xhL-S4lueVjCtHbyE=`
+
+- `string-b64-raw-std` - Base64 raw standard encoded data  
+  Example: `wqFIb2xhL+S4lueVjCtHbyE`
+
+- `string-b64-raw-url` - Base64 raw URL encoded data  
+  Example: `wqFIb2xhL-S4lueVjCtHbyE`
 
 ## JSON Path Format
 
