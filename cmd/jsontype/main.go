@@ -6,7 +6,6 @@ import (
 	"log"
 	"log/slog"
 	"os"
-	"runtime"
 	"strings"
 	"unicode"
 
@@ -18,7 +17,7 @@ import (
 func ObjectPathCharset() []rune {
 	charset := make([]rune, 0)
 
-	for r := rune(0); r <= unicode.MaxRune; r++ {
+	for r := rune(0x41); r <= unicode.MaxRune; r++ {
 		if unicode.IsLetter(r) {
 			charset = append(charset, r)
 		}
@@ -63,7 +62,6 @@ func parsePathList(s string) ([][]string, error) {
 }
 
 func main() {
-	var filesStr string
 	var outPath string
 	var logLevel string
 	var parseObjectsStr string
@@ -71,7 +69,6 @@ func main() {
 	var noStringAnalysis bool
 	var maxDepth int
 
-	flag.StringVar(&filesStr, "file", "", "space-separated JSON files to parse (eg './parseme1.json ./parseme2.json')")
 	flag.StringVar(&outPath, "out", "", "output file (default stdout)")
 	flag.StringVar(&logLevel, "log-level", "info", "debug|info|warn|error")
 	flag.BoolVar(&noStringAnalysis, "no-string-analysis", false, "will try to additionally detect types like string-uuid, string-email, etc within strings")
@@ -79,6 +76,11 @@ func main() {
 	flag.StringVar(&ignoreObjectsStr, "ignore-objects", "", "space-separated JSON paths to ignore (e.g., 'metadata debug.info')")
 	flag.IntVar(&maxDepth, "max-depth", 0, "maximum depth to parse (0 = unlimited)")
 	flag.Parse()
+
+	files := make([]string, flag.NArg())
+	for i, arg := range flag.Args() {
+		files[i] = arg
+	}
 
 	level := slog.LevelInfo
 	if err := level.UnmarshalText([]byte(logLevel)); err != nil {
@@ -91,24 +93,6 @@ func main() {
 	stat, _ := os.Stdin.Stat()
 	hasStdin := stat.Mode()&os.ModeCharDevice == 0
 
-	filesPathOptsArray := []sp.Option{
-		sp.WithProcessFunc(
-			func(element string) (processed string, skip bool, err error) {
-				return strings.TrimSpace(element), false, nil
-			},
-		),
-	}
-	if runtime.GOOS == "windows" {
-		filesPathOptsArray = append(
-			filesPathOptsArray,
-			sp.WithWindowsPath(),
-		)
-	}
-
-	files, err := sp.Parse(filesStr, filesPathOptsArray...)
-	if err != nil {
-		log.Fatalf("failed to parse files argument: %v", err)
-	}
 	if !hasStdin && len(files) == 0 {
 		flag.Usage()
 		os.Exit(1)
