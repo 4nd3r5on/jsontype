@@ -4,7 +4,7 @@ JSONType is a CLI tool that analyzes one or more JSON files, infers their data t
 
 It is designed for exploration, debugging, reverse‑engineering unknown JSON, and documenting real‑world data formats that don’t come with schemas.
 
----
+![Screenshot](./assets/screenshot.png)
 
 ## Installation
 
@@ -13,8 +13,6 @@ go install github.com/4nd3r5on/jsontype/cmd/jsontype@latest
 ```
 
 The binary will be installed as `jsontype` in your `$GOBIN`.
-
----
 
 ## Basic Usage
 
@@ -45,8 +43,6 @@ Write output to a file:
 jsontype -file ./parseme.json -out schema.txt
 ```
 
----
-
 ## CLI Flags
 
 ```
@@ -70,8 +66,6 @@ jsontype -file ./parseme.json -out schema.txt
 -out string
     Output file (default: stdout)
 ```
-
----
 
 ## JSON Path Format
 
@@ -115,8 +109,6 @@ users[].id
 $.users[].id
 ```
 
----
-
 ## Selective Parsing
 
 ### Parse only specific subtrees
@@ -135,8 +127,6 @@ jsontype -file data.json -ignore-objects "metadata,debug.info"
 
 Ignored paths are completely excluded from inference and merging.
 
----
-
 ## Typical Use Cases
 
 * Reverse‑engineering undocumented APIs
@@ -145,8 +135,6 @@ Ignored paths are completely excluded from inference and merging.
 * Creating documentation for real-world JSON formats
 * Validating assumptions before writing parsers
 
----
-
 ## Example
 
 ```sh
@@ -154,9 +142,3 @@ jsontype -file response.json -ignore-objects "debug" -max-depth 5
 ```
 
 Produces a compact, hierarchical description of the JSON structure, suitable for searching and comparison.
-
----
-
-## License
-
-MIT
