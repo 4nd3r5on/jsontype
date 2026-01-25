@@ -16,8 +16,8 @@ func Test_detectBase64_randomPools(t *testing.T) {
 
 	rng := rand.New(rand.NewSource(1))
 
-	genUTF8 := func(r *rand.Rand, min, max int) []byte {
-		n := min + r.Intn(max-min+1)
+	genUTF8 := func(r *rand.Rand, minVal, maxVal int) []byte {
+		n := minVal + r.Intn(maxVal-minVal+1)
 		rs := make([]rune, n)
 		for i := range rs {
 			rs[i] = rune(32 + r.Intn(95)) // printable ASCII
@@ -25,8 +25,8 @@ func Test_detectBase64_randomPools(t *testing.T) {
 		return []byte(string(rs))
 	}
 
-	genUnicodeGarbage := func(r *rand.Rand, min, max int) string {
-		n := min + r.Intn(max-min+1)
+	genUnicodeGarbage := func(r *rand.Rand, minVal, maxVal int) string {
+		n := minVal + r.Intn(maxVal-minVal+1)
 		rs := make([]rune, n)
 		for i := range rs {
 			// mix of non-ASCII unicode planes

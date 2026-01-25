@@ -63,6 +63,11 @@ linters:
       # More information: https://golangci-lint.run/usage/false-positives/#std-error-handling
       - std-error-handling
 
+    rules:
+      - path: _test\.go
+        linters:
+          - dupword
+
   # some linters are enabled by default
   # https://golangci-lint.run/usage/linters/
   #
